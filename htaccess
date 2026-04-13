@@ -1,0 +1,24 @@
+RewriteEngine On
+
+# If the request is not for a real file or directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# For subdomain based store routing
+RewriteCond %{HTTP_HOST} ^([^.]+)\.localhost$ [NC,OR]
+RewriteCond %{HTTP_HOST} ^([^.]+)\.mandigateway\.com$ [NC]
+RewriteRule ^(.*)$ index.php?subdomain=%1&page=$1 [L,QSA]
+
+# For clean product URLs (optional)
+RewriteRule ^product/([0-9]+)$ product.php?id=$1 [L,QSA]
+RewriteRule ^page/([a-zA-Z0-9-]+)$ page.php?slug=$1 [L,QSA]
+RewriteRule ^post/([a-zA-Z0-9-]+)$ post.php?slug=$1 [L,QSA]
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^(config\.php|.*\.sql)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
