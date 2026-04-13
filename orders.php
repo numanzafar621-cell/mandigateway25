@@ -1,14 +1,21 @@
 <?php 
 include '../config.php'; 
-include '../includes/functions.php';
+include '../includes/functions.php'; 
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../login.php");
+if (!isLoggedIn()) {
+    header("Location: ../login.php"); 
     exit();
 }
-$user = getUserData($_SESSION['user_id']);
-if ($user['role'] != 'admin') {
-    die("Access Denied! Only Admin can access this panel.");
+$user_id = $_SESSION['user_id'];
+
+// Update order status
+if (isset($_POST['update_status'])) {
+    $order_id = intval($_POST['order_id']);
+    $status = safeInput($_POST['status']);
+    $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND store_user_id = ?");
+    $stmt->bind_param("sii", $status, $order_id, $user_id);
+    $stmt->execute();
+    $success = "Order status updated!";
 }
 ?>
 <!DOCTYPE html>
@@ -16,64 +23,99 @@ if ($user['role'] != 'admin') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - All Orders</title>
+    <title>Orders - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        .sidebar { background: #1a1e2b; min-height: 100vh; }
-    </style>
+    <link href="../assets/css/style.css" rel="stylesheet">
 </head>
 <body>
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 sidebar text-white p-3">
-            <h4 class="text-center mb-4"><i class="fas fa-crown"></i> Admin Panel</h4>
-            <hr>
-            <ul class="nav flex-column">
-                <li class="nav-item"><a href="index.php" class="nav-link text-white"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li class="nav-item"><a href="users.php" class="nav-link text-white"><i class="fas fa-users"></i> Users & Stores</a></li>
-                <li class="nav-item"><a href="products.php" class="nav-link text-white"><i class="fas fa-box"></i> Pending Products</a></li>
-                <li class="nav-item"><a href="orders.php" class="nav-link text-white active"><i class="fas fa-shopping-cart"></i> All Orders</a></li>
-                <li class="nav-item"><a href="chat.php" class="nav-link text-white"><i class="fas fa-comments"></i> Store Chats</a></li>
-                <li class="nav-item"><a href="../logout.php" class="nav-link text-danger"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-            </ul>
-        </div>
-        
-        <!-- Main Content -->
+        <?php include 'sidebar.php'; ?>
         <div class="col-md-9 col-lg-10 p-4">
-            <h2><i class="fas fa-shopping-cart"></i> All Orders (All Stores)</h2>
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Order ID</th><th>Store</th><th>Customer</th><th>Phone</th><th>Address</th>
-                            <th>Total</th><th>Payment</th><th>Status</th><th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $orders = $conn->query("SELECT o.*, u.business_name FROM orders o JOIN users u ON o.store_user_id = u.id ORDER BY o.id DESC");
-                        if($orders->num_rows > 0):
-                            while($ord = $orders->fetch_assoc()):
-                                $status_class = $ord['status'] == 'completed' ? 'success' : ($ord['status'] == 'cancelled' ? 'danger' : 'warning');
-                        ?>
-                        <tr>
-                            <td>#<?= $ord['id'] ?></td>
-                            <td><?= htmlspecialchars($ord['business_name']) ?></td>
-                            <td><?= htmlspecialchars($ord['customer_name']) ?></td>
-                            <td><?= $ord['customer_phone'] ?></td>
-                            <td><?= htmlspecialchars(substr($ord['customer_address'], 0, 40)) ?>...</td>
-                            <td>Rs. <?= number_format($ord['total']) ?></td>
-                            <td><?= $ord['payment_method'] ?></td>
-                            <td><span class="badge bg-<?= $status_class ?>"><?= $ord['status'] ?></span></td>
-                            <td><?= date('d M Y', strtotime($ord['created_at'])) ?></td>
-                        </tr>
-                        <?php endwhile; else: ?>
-                        <tr><td colspan="9" class="text-center">No orders found.</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+            <h2><i class="fas fa-shopping-cart"></i> Orders</h2>
+            <?php if(isset($success)) echo "<div class='alert alert-success'>$success</div>"; ?>
+            
+            <div class="card">
+                <div class="card-header bg-secondary text-white">All Orders</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <thead class="table-dark">
+                                <tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Address</th><th>Total</th><th>Payment</th><th>Status</th><th>Action</th></tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $orders = $conn->query("SELECT * FROM orders WHERE store_user_id = $user_id ORDER BY id DESC");
+                                if($orders->num_rows > 0):
+                                    while($order = $orders->fetch_assoc()):
+                                ?>
+                                <tr>
+                                    <td>#<?= $order['id'] ?></td>
+                                    <td><?= htmlspecialchars($order['customer_name']) ?></td>
+                                    <td><?= $order['customer_phone'] ?></td>
+                                    <td><?= htmlspecialchars(substr($order['customer_address'], 0, 50)) ?>...</td>
+                                    <td>Rs. <?= number_format($order['total']) ?></td>
+                                    <td><?= $order['payment_method'] ?></td>
+                                    <td>
+                                        <span class="badge bg-<?= $order['status'] == 'completed' ? 'success' : ($order['status'] == 'cancelled' ? 'danger' : 'warning') ?>">
+                                            <?= $order['status'] ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#orderModal<?= $order['id'] ?>">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        
+                                        <!-- Update Status Form inline -->
+                                        <form method="POST" class="d-inline">
+                                            <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                                            <select name="status" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
+                                                <option value="pending" <?= $order['status']=='pending'?'selected':'' ?>>Pending</option>
+                                                <option value="processing" <?= $order['status']=='processing'?'selected':'' ?>>Processing</option>
+                                                <option value="completed" <?= $order['status']=='completed'?'selected':'' ?>>Completed</option>
+                                                <option value="cancelled" <?= $order['status']=='cancelled'?'selected':'' ?>>Cancelled</option>
+                                            </select>
+                                            <input type="hidden" name="update_status" value="1">
+                                        </form>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Modal for order details -->
+                                <div class="modal fade" id="orderModal<?= $order['id'] ?>" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Order #<?= $order['id'] ?> Details</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Customer:</strong> <?= htmlspecialchars($order['customer_name']) ?></p>
+                                                <p><strong>Phone:</strong> <?= $order['customer_phone'] ?></p>
+                                                <p><strong>Address:</strong> <?= nl2br(htmlspecialchars($order['customer_address'])) ?></p>
+                                                <p><strong>Payment:</strong> <?= $order['payment_method'] ?></p>
+                                                <p><strong>Total:</strong> Rs. <?= number_format($order['total']) ?></p>
+                                                <hr>
+                                                <h6>Products:</h6>
+                                                <ul>
+                                                <?php
+                                                $items = $conn->query("SELECT oi.*, p.title FROM order_items oi JOIN products p ON oi.product_id = p.id WHERE oi.order_id = {$order['id']}");
+                                                while($item = $items->fetch_assoc()):
+                                                ?>
+                                                    <li><?= htmlspecialchars($item['title']) ?> x <?= $item['quantity'] ?> = Rs. <?= number_format($item['price'] * $item['quantity']) ?></li>
+                                                <?php endwhile; ?>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endwhile; else: ?>
+                                <tr><td colspan="8" class="text-center">No orders yet.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

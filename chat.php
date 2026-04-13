@@ -1,71 +1,117 @@
 <?php 
 include '../config.php'; 
-$store = getCurrentStore();
-if (!$store) {
-    die("<h1 class='text-center mt-5'>Store Not Found!</h1>");
+include '../includes/functions.php'; 
+
+if (!isLoggedIn()) {
+    header("Location: ../login.php"); 
+    exit();
 }
-session_id() or session_start();
-$customer_session = session_id();
-$customer_name = $_POST['customer_name'] ?? $_GET['name'] ?? 'Guest';
+$user_id = $_SESSION['user_id'];
 ?>
 <!DOCTYPE html>
 <html lang="ur">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with <?= htmlspecialchars($store['business_name']) ?></title>
+    <title>Live Chat - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-        .chat-container { max-width: 600px; margin: 50px auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .chat-header { background: <?= $store['header_color'] ?>; color: white; padding: 15px 20px; }
-        .chat-box { height: 400px; overflow-y: auto; padding: 15px; background: #f8f9fa; }
-        .message { margin-bottom: 15px; clear: both; }
-        .customer-msg { background: #0d6efd; color: white; float: right; border-radius: 15px 15px 0 15px; padding: 8px 15px; max-width: 70%; }
-        .owner-msg { background: #e9ecef; color: #000; float: left; border-radius: 15px 15px 15px 0; padding: 8px 15px; max-width: 70%; }
-        .input-group { margin-top: 10px; }
-        .small-text { font-size: 11px; opacity: 0.7; margin-top: 5px; display: block; }
-        .whatsapp-float { position: fixed; bottom: 20px; right: 20px; background: #25D366; color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; z-index: 999; text-decoration: none; }
+        .chat-container { height: 500px; display: flex; flex-direction: column; background: #f8f9fa; border-radius: 15px; overflow: hidden; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #fff; }
+        .message { margin-bottom: 15px; display: flex; }
+        .message.customer { justify-content: flex-start; }
+        .message.owner { justify-content: flex-end; }
+        .message .bubble { max-width: 70%; padding: 10px 15px; border-radius: 20px; }
+        .message.customer .bubble { background: #e9ecef; color: #000; border-bottom-left-radius: 5px; }
+        .message.owner .bubble { background: #0d6efd; color: white; border-bottom-right-radius: 5px; }
+        .message small { display: block; font-size: 11px; margin-top: 5px; opacity: 0.7; }
+        .customer-list { max-height: 500px; overflow-y: auto; }
+        .customer-item { padding: 12px; border-bottom: 1px solid #ddd; cursor: pointer; transition: background 0.2s; }
+        .customer-item:hover { background: #f0f0f0; }
+        .customer-item.active { background: #0d6efd; color: white; }
+        .chat-input { padding: 15px; background: white; border-top: 1px solid #ddd; }
     </style>
 </head>
 <body>
-<div class="chat-container">
-    <div class="chat-header">
-        <h5 class="mb-0"><i class="fab fa-whatsapp"></i> Chat with <?= htmlspecialchars($store['business_name']) ?></h5>
-        <small>We will reply as soon as possible</small>
-    </div>
-    <div class="chat-box" id="chatMessages"></div>
-    <div class="p-3 bg-white">
-        <div class="input-group">
-            <input type="text" id="messageInput" class="form-control" placeholder="Type your message...">
-            <button class="btn btn-primary" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
-        </div>
-        <div class="mt-2">
-            <input type="text" id="nameInput" class="form-control" placeholder="Your name (optional)" value="<?= htmlspecialchars($customer_name) ?>">
+<div class="container-fluid">
+    <div class="row">
+        <?php include 'sidebar.php'; ?>
+        <div class="col-md-9 col-lg-10 p-4">
+            <h2><i class="fas fa-comments"></i> Live Chat with Customers</h2>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">Active Customers</div>
+                        <div class="customer-list" id="customerList">
+                            <div class="text-center p-3">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white" id="chatHeader">Select a customer to start chatting</div>
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chatMessages"></div>
+                            <div class="chat-input">
+                                <div class="input-group">
+                                    <input type="text" id="messageInput" class="form-control" placeholder="Type your message..." disabled>
+                                    <button class="btn btn-primary" id="sendBtn" disabled><i class="fas fa-paper-plane"></i> Send</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-
-<!-- Optional WhatsApp floating button -->
-<?php if($store['whatsapp_number']): ?>
-<a href="https://wa.me/<?= $store['whatsapp_number'] ?>" class="whatsapp-float" target="_blank"><i class="fab fa-whatsapp"></i></a>
-<?php endif; ?>
-
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-let sessionId = "<?= $customer_session ?>";
-let storeUserId = <?= $store['user_id'] ?>;
+let currentSession = null;
+let currentName = null;
+
+function loadCustomers() {
+    $.get('chat-fetch.php?action=customers', function(data) {
+        let html = '';
+        if(data.length === 0) {
+            html = '<div class="text-center p-3">No customers yet</div>';
+        } else {
+            data.forEach(function(c) {
+                html += `<div class="customer-item" data-session="${c.customer_session}" data-name="${c.customer_name}" onclick="selectCustomer(this)">
+                            <strong>${c.customer_name}</strong><br>
+                            <small>${c.last_message.substring(0, 30)}</small>
+                        </div>`;
+            });
+        }
+        $('#customerList').html(html);
+    }, 'json');
+}
+
+function selectCustomer(el) {
+    $('.customer-item').removeClass('active');
+    $(el).addClass('active');
+    currentSession = $(el).data('session');
+    currentName = $(el).data('name');
+    $('#chatHeader').text('Chat with ' + currentName);
+    $('#messageInput').prop('disabled', false);
+    $('#sendBtn').prop('disabled', false);
+    loadMessages();
+    startPolling();
+}
 
 function loadMessages() {
-    $.get(`chat-fetch.php?store_id=${storeUserId}&session=${sessionId}`, function(data) {
+    if(!currentSession) return;
+    $.get(`chat-fetch.php?action=messages&session=${currentSession}`, function(data) {
         let html = '';
         data.forEach(function(m) {
-            if(m.sender === 'customer') {
-                html += `<div class="message customer-msg" style="float:right; clear:both;">${m.message}<small class="small-text">${m.created_at}</small></div>`;
-            } else {
-                html += `<div class="message owner-msg" style="float:left; clear:both;">${m.message}<small class="small-text">${m.created_at}</small></div>`;
-            }
+            let cls = (m.sender === 'owner') ? 'owner' : 'customer';
+            html += `<div class="message ${cls}">
+                        <div class="bubble">
+                            ${m.message}
+                            <small>${m.created_at}</small>
+                        </div>
+                    </div>`;
         });
         $('#chatMessages').html(html);
         $('#chatMessages').scrollTop($('#chatMessages')[0].scrollHeight);
@@ -74,24 +120,24 @@ function loadMessages() {
 
 function sendMessage() {
     let msg = $('#messageInput').val();
-    let name = $('#nameInput').val() || 'Guest';
-    if(!msg) return;
-    $.post('chat-send.php', {
-        store_id: storeUserId,
-        session: sessionId,
-        name: name,
-        message: msg
-    }, function() {
+    if(!msg || !currentSession) return;
+    $.post('chat-send.php', { action: 'owner_send', session: currentSession, message: msg }, function() {
         $('#messageInput').val('');
         loadMessages();
     });
 }
 
-loadMessages();
-setInterval(loadMessages, 3000);
+let pollingInterval;
+function startPolling() {
+    if(pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(() => { if(currentSession) loadMessages(); }, 3000);
+}
 
-$('#messageInput').keypress(function(e) {
-    if(e.which == 13) sendMessage();
+$(document).ready(function() {
+    loadCustomers();
+    setInterval(loadCustomers, 10000);
+    $('#sendBtn').click(sendMessage);
+    $('#messageInput').keypress(function(e) { if(e.which == 13) sendMessage(); });
 });
 </script>
 </body>
