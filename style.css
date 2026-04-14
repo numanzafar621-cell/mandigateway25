@@ -1,5 +1,4 @@
-/* assets/css/style.css - Complete updated version */
-
+/* assets/css/style.css */
 * {
     margin: 0;
     padding: 0;
@@ -12,7 +11,7 @@ body {
     color: #333;
 }
 
-/* ========== Global Card Styles ========== */
+/* Card Styles */
 .card {
     border-radius: 16px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
@@ -26,7 +25,7 @@ body {
     box-shadow: 0 15px 35px rgba(0,0,0,0.15);
 }
 
-/* ========== Buttons ========== */
+/* Buttons */
 .btn-primary {
     border-radius: 12px;
     padding: 10px 20px;
@@ -38,7 +37,7 @@ body {
     transform: scale(1.02);
 }
 
-/* ========== Form Controls ========== */
+/* Form Controls */
 .form-control, .form-select {
     border-radius: 12px;
     padding: 12px 15px;
@@ -50,7 +49,7 @@ body {
     border-color: #0d6efd;
 }
 
-/* ========== Tables ========== */
+/* Tables */
 .table {
     background: white;
     border-radius: 16px;
@@ -63,7 +62,7 @@ body {
     color: white;
 }
 
-/* ========== Dashboard Sidebar ========== */
+/* Dashboard Sidebar */
 .sidebar {
     min-height: 100vh;
     background: #212529;
@@ -83,74 +82,46 @@ body {
     color: white;
 }
 
-/* ========== Product Card (Store Front) ========== */
+/* Product Cards */
 .product-card {
     border: none;
-    border-radius: 20px;
+    border-radius: 16px;
     overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s;
     background: white;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
 }
 
-.product-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-}
-
-.product-img {
-    height: 220px;
-    width: 100%;
+.product-card img {
+    height: 200px;
     object-fit: cover;
 }
 
-.product-body {
-    padding: 1.25rem;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        min-height: auto;
+    }
+    .product-card img {
+        height: 150px;
+    }
 }
 
-.product-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+/* Loading Animation */
+.loader-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
-.product-price {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #28a745;
-    margin-bottom: 0.5rem;
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-/* Star Rating */
-.rating {
-    margin: 10px 0;
-}
-
-.rating i {
-    font-size: 14px;
-}
-
-/* Product grid - 2 columns */
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-}
-
-/* Buttons on product card */
-.btn-cart, .btn-wa {
-    border-radius: 30px;
-    padding: 8px 12px;
-    font-size: 0.85rem;
-}
-
-/* ========== WhatsApp Float Button ========== */
+/* WhatsApp Float Button */
 .whatsapp-float {
     position: fixed;
     bottom: 20px;
@@ -173,32 +144,4 @@ body {
 .whatsapp-float:hover {
     transform: scale(1.1);
     color: white;
-}
-
-/* ========== Responsive ========== */
-@media (max-width: 768px) {
-    .sidebar {
-        min-height: auto;
-    }
-    .product-img {
-        height: 150px;
-    }
-    .grid-container {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ========== Loading Animation ========== */
-.loader-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #0d6efd;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
