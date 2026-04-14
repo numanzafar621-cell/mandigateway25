@@ -1,144 +1,87 @@
 <?php 
 include '../config.php'; 
-include '../includes/functions.php'; 
+include '../includes/functions.php';
+if ($_SESSION['role'] != 'admin') die("Access Denied");
 
-if (!isLoggedIn()) {
-    header("Location: ../login.php"); 
-    exit();
+$selected_store = isset($_GET['store_id']) ? intval($_GET['store_id']) : 0;
+$chats = [];
+if ($selected_store) {
+    $chats = $conn->query("SELECT * FROM chat_messages WHERE store_user_id = $selected_store ORDER BY created_at ASC");
 }
-$user_id = $_SESSION['user_id'];
+$stores = $conn->query("SELECT DISTINCT u.id, u.business_name FROM chat_messages c JOIN users u ON c.store_user_id = u.id ORDER BY u.business_name");
 ?>
 <!DOCTYPE html>
 <html lang="ur">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Chat - Dashboard</title>
+    <title>Admin - Store Chats</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        .chat-container { height: 500px; display: flex; flex-direction: column; background: #f8f9fa; border-radius: 15px; overflow: hidden; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #fff; }
-        .message { margin-bottom: 15px; display: flex; }
-        .message.customer { justify-content: flex-start; }
-        .message.owner { justify-content: flex-end; }
-        .message .bubble { max-width: 70%; padding: 10px 15px; border-radius: 20px; }
-        .message.customer .bubble { background: #e9ecef; color: #000; border-bottom-left-radius: 5px; }
-        .message.owner .bubble { background: #0d6efd; color: white; border-bottom-right-radius: 5px; }
-        .message small { display: block; font-size: 11px; margin-top: 5px; opacity: 0.7; }
-        .customer-list { max-height: 500px; overflow-y: auto; }
-        .customer-item { padding: 12px; border-bottom: 1px solid #ddd; cursor: pointer; transition: background 0.2s; }
-        .customer-item:hover { background: #f0f0f0; }
-        .customer-item.active { background: #0d6efd; color: white; }
-        .chat-input { padding: 15px; background: white; border-top: 1px solid #ddd; }
+        .sidebar { background: #1a1e2b; min-height: 100vh; }
+        .chat-message { border-bottom: 1px solid #eee; padding: 10px; }
+        .customer { background: #e3f2fd; }
+        .owner { background: #f1f8e9; }
     </style>
 </head>
 <body>
 <div class="container-fluid">
     <div class="row">
-        <?php include 'sidebar.php'; ?>
+        <div class="col-md-3 col-lg-2 sidebar text-white p-3">
+            <h4 class="text-center mb-4"><i class="fas fa-crown"></i> Admin Panel</h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a href="index.php" class="nav-link text-white"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="users.php" class="nav-link text-white"><i class="fas fa-users"></i> Users & Stores</a></li>
+                <li class="nav-item"><a href="products.php" class="nav-link text-white"><i class="fas fa-box"></i> Pending Products</a></li>
+                <li class="nav-item"><a href="orders.php" class="nav-link text-white"><i class="fas fa-shopping-cart"></i> All Orders</a></li>
+                <li class="nav-item"><a href="chat.php" class="nav-link text-white active"><i class="fas fa-comments"></i> Store Chats</a></li>
+                <li class="nav-item"><a href="../logout.php" class="nav-link text-danger"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
         <div class="col-md-9 col-lg-10 p-4">
-            <h2><i class="fas fa-comments"></i> Live Chat with Customers</h2>
-            <div class="row mt-3">
+            <h2><i class="fas fa-comments"></i> All Store Chats</h2>
+            <div class="row">
                 <div class="col-md-4">
                     <div class="card">
-                        <div class="card-header bg-primary text-white">Active Customers</div>
-                        <div class="customer-list" id="customerList">
-                            <div class="text-center p-3">Loading...</div>
+                        <div class="card-header bg-primary text-white">Stores with Chats</div>
+                        <div class="list-group list-group-flush">
+                            <?php if($stores->num_rows > 0): ?>
+                                <?php while($store = $stores->fetch_assoc()): ?>
+                                    <a href="?store_id=<?= $store['id'] ?>" class="list-group-item list-group-item-action <?= ($selected_store == $store['id']) ? 'active' : '' ?>">
+                                        <?= htmlspecialchars($store['business_name']) ?>
+                                    </a>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <div class="list-group-item">No chats yet</div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header bg-secondary text-white" id="chatHeader">Select a customer to start chatting</div>
-                        <div class="chat-container">
-                            <div class="chat-messages" id="chatMessages"></div>
-                            <div class="chat-input">
-                                <div class="input-group">
-                                    <input type="text" id="messageInput" class="form-control" placeholder="Type your message..." disabled>
-                                    <button class="btn btn-primary" id="sendBtn" disabled><i class="fas fa-paper-plane"></i> Send</button>
-                                </div>
+                    <?php if($selected_store && $chats && $chats->num_rows > 0): ?>
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">Chat Messages</div>
+                            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                <?php while($msg = $chats->fetch_assoc()): ?>
+                                    <div class="chat-message <?= $msg['sender'] == 'customer' ? 'customer' : 'owner' ?>">
+                                        <strong><?= ucfirst($msg['sender']) ?> (<?= htmlspecialchars($msg['customer_name']) ?>):</strong>
+                                        <p class="mb-0"><?= nl2br(htmlspecialchars($msg['message'])) ?></p>
+                                        <small class="text-muted"><?= $msg['created_at'] ?></small>
+                                    </div>
+                                <?php endwhile; ?>
                             </div>
                         </div>
-                    </div>
+                    <?php elseif($selected_store): ?>
+                        <div class="alert alert-info">No messages for this store.</div>
+                    <?php else: ?>
+                        <div class="alert alert-secondary">Select a store from the left to view chats.</div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-let currentSession = null;
-let currentName = null;
-
-function loadCustomers() {
-    $.get('chat-fetch.php?action=customers', function(data) {
-        let html = '';
-        if(data.length === 0) {
-            html = '<div class="text-center p-3">No customers yet</div>';
-        } else {
-            data.forEach(function(c) {
-                html += `<div class="customer-item" data-session="${c.customer_session}" data-name="${c.customer_name}" onclick="selectCustomer(this)">
-                            <strong>${c.customer_name}</strong><br>
-                            <small>${c.last_message.substring(0, 30)}</small>
-                        </div>`;
-            });
-        }
-        $('#customerList').html(html);
-    }, 'json');
-}
-
-function selectCustomer(el) {
-    $('.customer-item').removeClass('active');
-    $(el).addClass('active');
-    currentSession = $(el).data('session');
-    currentName = $(el).data('name');
-    $('#chatHeader').text('Chat with ' + currentName);
-    $('#messageInput').prop('disabled', false);
-    $('#sendBtn').prop('disabled', false);
-    loadMessages();
-    startPolling();
-}
-
-function loadMessages() {
-    if(!currentSession) return;
-    $.get(`chat-fetch.php?action=messages&session=${currentSession}`, function(data) {
-        let html = '';
-        data.forEach(function(m) {
-            let cls = (m.sender === 'owner') ? 'owner' : 'customer';
-            html += `<div class="message ${cls}">
-                        <div class="bubble">
-                            ${m.message}
-                            <small>${m.created_at}</small>
-                        </div>
-                    </div>`;
-        });
-        $('#chatMessages').html(html);
-        $('#chatMessages').scrollTop($('#chatMessages')[0].scrollHeight);
-    }, 'json');
-}
-
-function sendMessage() {
-    let msg = $('#messageInput').val();
-    if(!msg || !currentSession) return;
-    $.post('chat-send.php', { action: 'owner_send', session: currentSession, message: msg }, function() {
-        $('#messageInput').val('');
-        loadMessages();
-    });
-}
-
-let pollingInterval;
-function startPolling() {
-    if(pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(() => { if(currentSession) loadMessages(); }, 3000);
-}
-
-$(document).ready(function() {
-    loadCustomers();
-    setInterval(loadCustomers, 10000);
-    $('#sendBtn').click(sendMessage);
-    $('#messageInput').keypress(function(e) { if(e.which == 13) sendMessage(); });
-});
-</script>
 </body>
 </html>
