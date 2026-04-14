@@ -1,9 +1,7 @@
 <?php 
 include '../config.php'; 
 $store = getCurrentStore();
-if (!$store) {
-    die("<h1 class='text-center mt-5'>Store Not Found!</h1>");
-}
+if (!$store) die("<h1 class='text-center mt-5'>Store Not Found!</h1>");
 $user_id = $store['user_id'];
 $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if (!$product_id) {
@@ -12,11 +10,9 @@ if (!$product_id) {
 }
 
 $product = $conn->query("SELECT * FROM products WHERE id = $product_id AND user_id = $user_id AND status='active'")->fetch_assoc();
-if (!$product) {
-    die("<h1 class='text-center mt-5'>Product Not Found!</h1>");
-}
+if (!$product) die("<h1 class='text-center mt-5'>Product Not Found!</h1>");
 
-// Get reviews
+// Get reviews and rating
 $reviews = $conn->query("SELECT * FROM reviews WHERE product_id = $product_id ORDER BY created_at DESC");
 $avg_rating = $conn->query("SELECT AVG(rating) as avg FROM reviews WHERE product_id = $product_id")->fetch_assoc()['avg'];
 $avg_rating = round($avg_rating, 1);
@@ -41,10 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
     <title><?= htmlspecialchars($product['title']) ?> - <?= htmlspecialchars($store['business_name']) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="../assets/css/style.css" rel="stylesheet">
     <style>
         .header { background: <?= $store['header_color'] ?>; color: white; padding: 15px 0; }
         .rating i { font-size: 20px; cursor: pointer; }
-        .rating-selected { color: #ffc107; }
+        .review-card { border-radius: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
@@ -58,9 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
     <div class="row">
         <div class="col-md-5">
             <?php if($product['image']): ?>
-                <img src="../<?= $product['image'] ?>" class="img-fluid rounded" alt="<?= htmlspecialchars($product['title']) ?>">
+                <img src="../<?= $product['image'] ?>" class="img-fluid rounded shadow" alt="<?= htmlspecialchars($product['title']) ?>">
             <?php else: ?>
-                <img src="../uploads/no-image.png" class="img-fluid rounded" alt="No Image">
+                <img src="../uploads/no-image.png" class="img-fluid rounded shadow" alt="No Image">
             <?php endif; ?>
         </div>
         <div class="col-md-7">
@@ -80,8 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
             </div>
             <p class="mt-3"><?= nl2br(htmlspecialchars($product['description'])) ?></p>
             <div class="mt-4">
-                <a href="cart.php?add=<?= $product['id'] ?>" class="btn btn-primary btn-lg">Add to Cart</a>
-                <a href="https://wa.me/<?= $store['whatsapp_number'] ?>?text=I want to buy <?= urlencode($product['title']) ?> (Rs. <?= $product['price'] ?>)" class="btn btn-success btn-lg" target="_blank">Order on WhatsApp</a>
+                <a href="cart.php?add=<?= $product['id'] ?>" class="btn btn-primary btn-lg"><i class="fas fa-cart-plus"></i> Add to Cart</a>
+                <a href="https://wa.me/<?= $store['whatsapp_number'] ?>?text=I want to buy <?= urlencode($product['title']) ?> (Rs. <?= $product['price'] ?>)" class="btn btn-success btn-lg" target="_blank"><i class="fab fa-whatsapp"></i> Order on WhatsApp</a>
             </div>
         </div>
     </div>
@@ -92,10 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
             <h4>Customer Reviews</h4>
             <?php if($reviews->num_rows > 0): ?>
                 <?php while($rev = $reviews->fetch_assoc()): ?>
-                    <div class="card mb-3">
+                    <div class="card review-card">
                         <div class="card-body">
                             <strong><?= htmlspecialchars($rev['customer_name']) ?></strong>
-                            <div>
+                            <div class="my-1">
                                 <?php for($i=1; $i<=5; $i++): ?>
                                     <?php if($i <= $rev['rating']): ?>
                                         <i class="fas fa-star text-warning"></i>
@@ -137,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
                             <label>Your Review</label>
                             <textarea name="comment" class="form-control" rows="3" required></textarea>
                         </div>
-                        <button type="submit" name="submit_review" class="btn btn-primary">Submit Review</button>
+                        <button type="submit" name="submit_review" class="btn btn-primary w-100">Submit Review</button>
                     </form>
                 </div>
             </div>
@@ -165,5 +162,4 @@ document.querySelectorAll('.rating i').forEach(star => {
 });
 </script>
 </body>
-</html
-
+</html>
