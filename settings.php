@@ -1,7 +1,4 @@
 
-
-
-
 <?php 
 include '../config.php'; 
 include '../includes/functions.php'; 
