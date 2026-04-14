@@ -9,7 +9,6 @@ $where = $search ? "AND (title LIKE '%$search%' OR description LIKE '%$search%')
 $products = mysqli_query($conn, "SELECT * FROM products WHERE user_id = $user_id AND status='active' $where ORDER BY created_at DESC");
 $sliders = mysqli_query($conn, "SELECT * FROM sliders WHERE user_id = $user_id ORDER BY position ASC");
 
-// Helper function to get rating for a product
 function getProductRating($product_id) {
     global $conn;
     $rating = $conn->query("SELECT AVG(rating) as avg, COUNT(*) as total FROM reviews WHERE product_id = $product_id")->fetch_assoc();
@@ -24,9 +23,20 @@ function getProductRating($product_id) {
     <title><?= htmlspecialchars($store['business_name']) ?> - MandiGateway Store</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="../assets/css/style.css" rel="stylesheet">
     <style>
         .header { background: <?= $store['header_color'] ?>; color: white; padding: 20px 0; }
+        .product-card { border: none; border-radius: 20px; transition: all 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.08); background: white; height: 100%; display: flex; flex-direction: column; }
+        .product-card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .product-img { height: 220px; object-fit: cover; width: 100%; }
+        .product-body { padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .product-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .product-price { font-size: 1.3rem; font-weight: 700; color: #28a745; margin-bottom: 0.5rem; }
+        .rating { margin: 10px 0; }
+        .rating i { font-size: 14px; }
+        .btn-cart, .btn-wa { border-radius: 30px; padding: 8px 12px; font-size: 0.85rem; }
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+        @media (max-width: 768px) { .grid-container { grid-template-columns: 1fr; } }
+        .whatsapp-float { position: fixed; bottom: 20px; right: 20px; background: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; z-index: 999; text-decoration: none; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
         .carousel-item img { height: 400px; object-fit: cover; }
         @media (max-width: 768px) { .carousel-item img { height: 200px; } }
     </style>
