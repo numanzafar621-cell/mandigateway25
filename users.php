@@ -88,12 +88,10 @@ if (isset($_GET['delete'])) {
                             <td><strong><?= $row['subdomain'] ?>.mandigateway.com</strong></td>
                             <td><span class="badge bg-<?= $status_class ?>"><?= $row['status'] ?></span></td>
                             <td>
-                                <!-- Modal Button -->
                                 <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#verifyModal<?= $row['id'] ?>">
                                     <i class="fas fa-eye"></i> View CNIC & Address
                                 </button>
                                 
-                                <!-- Modal -->
                                 <div class="modal fade" id="verifyModal<?= $row['id'] ?>" tabindex="-1">
                                     <div class="modal-dialog modal-lg">
                                         <div class="modal-content">
@@ -149,11 +147,12 @@ if (isset($_GET['delete'])) {
                                 <a href="?delete=<?= $row['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this user and all data?')">Delete</a>
                                 <a href="../dashboard/index.php?user_id=<?= $row['id'] ?>" class="btn btn-sm btn-info" target="_blank">View Dashboard</a>
                              </div>
-                             ?>
                          </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    </div>
+</div>
+</body>
+</html>
